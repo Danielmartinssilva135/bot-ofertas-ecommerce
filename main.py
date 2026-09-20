@@ -34,16 +34,17 @@ def enviar_telegram(mensagem):
     }
     try:
         res = requests.post(url, json=payload, timeout=15)
+        print(f"Telegram status: {res.status_code}")
         return res.status_code == 200
     except Exception as e:
-        print(f"Erro ao ligar ao Telegram: {e}")
+        print(f"Erro Telegram: {e}")
         return False
 
 def recolher_ofertas():
-    # Fonte aberta de ofertas e promoções atualizadas
-    feed_url = "https://olhardigital.com.br/editorias/reviews-e-produtos/feed/"
+    # Feed RSS oficial de ofertas e descontos no Brasil
+    feed_url = "https://news.google.com/rss/search?q=oferta+desconto+promocao+brasil&hl=pt-BR&gl=BR&ceid=BR:pt-419"
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
     }
 
     try:
@@ -57,18 +58,12 @@ def recolher_ofertas():
         for el in root.findall(".//item"):
             titulo = el.find("title").text if el.find("title") is not None else ""
             link = el.find("link").text if el.find("link") is not None else ""
-            desc = el.find("description").text if el.find("description") is not None else ""
 
             if titulo and link:
-                desc_texto = limpar_html(desc)
-                if len(desc_texto) > 200:
-                    desc_texto = desc_texto[:200] + "..."
-
                 itens.append({
                     "id": link.strip(),
                     "titulo": limpar_html(titulo),
-                    "link": link.strip(),
-                    "descricao": desc_texto
+                    "link": link.strip()
                 })
         return itens
     except Exception as e:
@@ -84,31 +79,29 @@ def executar():
         print("Nenhuma oferta disponível no momento.")
         return
 
-    enviadas_nesta_execucao = 0
-    # Limita o envio a 2 novas ofertas por execução para não sobrecarregar o canal
+    enviadas = 0
+    # Publica 2 ofertas novas por execução
     for item in ofertas:
-        if enviadas_nesta_execucao >= 2:
+        if enviadas >= 2:
             break
 
         if item["id"] in enviados:
             continue
 
         titulo = html.escape(item["titulo"])
-        desc = html.escape(item["descricao"])
 
         mensagem = (
-            f"🔥 <b>NOVA OFERTA ENCONTRADA</b>\n\n"
+            f"🔥 <b>OFERTA & DESCONTO EM DESTAQUE</b>\n\n"
             f"📦 <b>{titulo}</b>\n\n"
-            f"📝 {desc}\n\n"
-            f"🛒 <a href='{item['link']}'>Conferir Detalhes e Desconto</a>"
+            f"🛒 <a href='{item['link']}'>Ver Oferta Completa</a>"
         )
 
         if enviar_telegram(mensagem):
             salvar_enviado(item["id"])
-            enviadas_nesta_execucao += 1
-            print(f"Publicada: {item['titulo']}")
+            enviadas += 1
+            print(f"Publicada com sucesso: {item['titulo']}")
 
-    print(f"Processo concluído. Novas mensagens: {enviadas_nesta_execucao}")
+    print(f"Processo concluído. Novas mensagens: {enviadas}")
 
 if __name__ == "__main__":
     executar()
