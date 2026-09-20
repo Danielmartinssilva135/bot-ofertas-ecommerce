@@ -1,8 +1,8 @@
 import html
 import requests
 
-# Credenciais diretas para validação imediata
-TELEGRAM_TOKEN = "8633628956:AAEub3LFY8SCmkgq8FSbghoaT_hml73ixnM"
+# Token corrigido diretamente com 'I' maiúsculo e ID do canal público
+TELEGRAM_TOKEN = "8633628956:AAEub3LFY8SCmkgq8FSbghoaT_hmI73ixnM"
 TELEGRAM_CHAT_ID = "@superofertas_brasil2026"
 
 def enviar_telegram(mensagem):
@@ -22,19 +22,20 @@ def enviar_telegram(mensagem):
         return False
 
 def executar():
-    print("Iniciando teste de envio...")
+    print("A iniciar envio de teste com o token atualizado...")
     
     mensagem = (
-        "🔥 <b>TESTE OFICIAL CONCLUÍDO COM SUCESSO!</b>\n\n"
-        "📦 <b>Produto:</b> Smart TV 50 Polegadas 4K UHD\n"
+        "🔥 <b>CANAL DE OFERTAS ATIVO!</b>\n\n"
+        "O robô conectou-se com sucesso ao Telegram e está pronto a publicar promoções diárias.\n\n"
+        "📦 <b>Exemplo:</b> Smart TV 50 Polegadas 4K UHD\n"
         "💰 <b>Preço:</b> R$ 1.899,00\n"
         "🏬 <b>Loja:</b> Amazon Brasil\n\n"
-        "🛒 <a href='https://www.amazon.com.br'>Ver Oferta no Site</a>"
+        "🛒 <a href='https://www.amazon.com.br'>Ver Oferta</a>"
     )
     
     sucesso = enviar_telegram(mensagem)
     if sucesso:
-        print("Mensagem enviada para o canal com sucesso!")
+        print("Sucesso! Mensagem enviada para o canal.")
     else:
         print("Falha ao enviar mensagem.")
 
