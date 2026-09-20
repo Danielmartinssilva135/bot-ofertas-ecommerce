@@ -2,7 +2,7 @@ import os
 import re
 import html
 import requests
-from bs4 import BeautifulSoup
+import xml.etree.ElementTree as ET
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
@@ -18,6 +18,12 @@ def salvar_enviado(link):
     with open(HISTORICO_FILE, "a", encoding="utf-8") as f:
         f.write(f"{link}\n")
 
+def limpar_html(texto):
+    if not texto:
+        return ""
+    clean = re.sub(r"<.*?>", "", texto)
+    return html.unescape(clean).strip()
+
 def enviar_telegram(mensagem):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {
@@ -28,81 +34,69 @@ def enviar_telegram(mensagem):
     }
     try:
         response = requests.post(url, json=payload, timeout=15)
+        if response.status_code != 200:
+            print(f"Erro Telegram ({response.status_code}): {response.text}")
         return response.status_code == 200
     except Exception as e:
-        print(f"Erro ao enviar para o Telegram: {e}")
+        print(f"Erro na conexao com o Telegram: {e}")
         return False
 
-def extrair_ofertas_feed():
+def obter_ofertas():
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
     }
-    # Canal agregador aberto de promoções nacionais (Amazon, Shopee, Mercado Livre, Magalu, etc.)
-    url = "https://t.me/s/LinksBrazil"
-    
+    feed_url = "https://www.promobit.com.br/feed/"
     try:
-        res = requests.get(url, headers=headers, timeout=20)
+        res = requests.get(feed_url, headers=headers, timeout=20)
         if res.status_code != 200:
-            print(f"Erro ao carregar ofertas: status {res.status_code}")
+            print(f"Falha ao aceder ao feed: status {res.status_code}")
             return []
-        
-        soup = BeautifulSoup(res.text, "html.parser")
-        mensagens = soup.find_all("div", class_="tgme_widget_message_wrap")
-        
-        ofertas = []
-        for wrap in mensagens:
-            msg_div = wrap.find("div", class_="tgme_widget_message_text")
-            if not msg_div:
-                continue
-            
-            links = [a.get("href") for a in msg_div.find_all("a") if a.get("href")]
-            # Filtra ofertas que possuam link externo de compra
-            links_compra = [l for l in links if "t.me" not in l]
-            
-            texto = msg_div.get_text(separator="\n").strip()
-            
-            if links_compra and len(texto) > 15:
-                ofertas.append({
-                    "id": links_compra[0],
-                    "texto": texto,
-                    "link": links_compra[0]
+
+        root = ET.fromstring(res.content)
+        itens = []
+        for item in root.findall(".//item"):
+            titulo = item.find("title").text if item.find("title") is not None else ""
+            link = item.find("link").text if item.find("link") is not None else ""
+            descricao = item.find("description").text if item.find("description") is not None else ""
+
+            if link and titulo:
+                itens.append({
+                    "titulo": limpar_html(titulo),
+                    "link": link.strip(),
+                    "descricao": limpar_html(descricao)[:200]
                 })
-        return ofertas
+        return itens
     except Exception as e:
-        print(f"Erro na extração de ofertas: {e}")
+        print(f"Erro ao analisar RSS: {e}")
         return []
 
 def executar():
     print("Iniciando varredura de ofertas...")
     enviados = carregar_enviados()
-    ofertas = extrair_ofertas_feed()
-    
+    ofertas = obter_ofertas()
+
     if not ofertas:
-        print("Nenhuma oferta encontrada na fonte.")
+        print("Nenhuma oferta encontrada no feed.")
         return
 
     novas_ofertas = 0
-    # Processa as ofertas mais recentes (limite de até 5 por ciclo para não sobrecarregar)
-    for item in ofertas[-5:]:
-        identificador = item["id"]
-        if identificador in enviados:
+    # Envia ate 3 ofertas novas por lote para inicializar o canal
+    for item in ofertas[:3]:
+        link = item["link"]
+        if link in enviados:
             continue
 
-        texto_limpo = html.escape(item["texto"])
-        if len(texto_limpo) > 600:
-            texto_limpo = texto_limpo[:600] + "..."
-
         mensagem = (
-            f"🔥 <b>OFERTA IMPERDÍVEL</b>\n\n"
-            f"{texto_limpo}\n\n"
-            f"🛒 <a href='{item['link']}'>Acessar Oferta com Desconto</a>"
+            f"🔥 <b>OFERTA DETECTADA</b>\n\n"
+            f"📦 <b>Produto:</b> {item['titulo']}\n\n"
+            f"📝 <b>Resumo:</b> {item['descricao']}...\n\n"
+            f"🔗 <a href='{link}'>Ver detalhes e comprar</a>"
         )
 
-        sucesso = enviar_telegram(mensagem)
-        if sucesso:
-            salvar_enviado(identificador)
+        if enviar_telegram(mensagem):
+            salvar_enviado(link)
             novas_ofertas += 1
-            print(f"Oferta enviada: {item['link']}")
+            print(f"Oferta enviada: {item['titulo']}")
 
     print(f"Execução finalizada. Total de novas ofertas enviadas: {novas_ofertas}")
 
