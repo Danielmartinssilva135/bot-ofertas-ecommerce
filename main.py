@@ -3,7 +3,7 @@ import html
 import requests
 from urllib.parse import quote_plus
 
-# Credenciais e IDs oficiais
+# Credenciais e configurações
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8633628956:AAEub3LFY8SCmkgq8FSbghoaT_hmI73ixnM")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "@superofertas_brasil2026")
 AMAZON_TAG = os.environ.get("AMAZON_TAG", "superofer0fb9-20")
@@ -12,7 +12,6 @@ ARQUIVO_PRODUTOS_ML = "produtos_mercadolivre.txt"
 HISTORICO_AMAZON = "historico_amazon.txt"
 HISTORICO_ML = "historico_mercadolivre.txt"
 
-# 1. Catálogo Amazon (Busca com tag dinâmica)
 TERMOS_AMAZON = [
     "Bolsa Térmica Marmita Almoço Trabalho",
     "Lancheira Térmica Impermeável Fitness",
@@ -57,16 +56,24 @@ def salvar_enviado(arquivo, item_id):
 
 def resetar_historico(arquivo):
     if os.path.exists(arquivo):
-        os.remove(arquivo)
+        try:
+            os.remove(arquivo)
+            print(f"Histórico reiniciado: {arquivo}")
+        except Exception as e:
+            print(f"Erro ao reiniciar {arquivo}: {e}")
 
 def carregar_ofertas_ml():
     ofertas = []
     if not os.path.exists(ARQUIVO_PRODUTOS_ML):
+        print(f"Aviso: {ARQUIVO_PRODUTOS_ML} não encontrado.")
         return ofertas
 
     with open(ARQUIVO_PRODUTOS_ML, "r", encoding="utf-8") as f:
         for linha in f:
-            partes = [p.strip() for p in linha.split("|")]
+            linha_limpa = linha.strip()
+            if not linha_limpa:
+                continue
+            partes = [p.strip() for p in linha_limpa.split("|")]
             if len(partes) >= 2:
                 ofertas.append({
                     "nome": partes[0],
@@ -74,10 +81,6 @@ def carregar_ofertas_ml():
                     "destaque": partes[2] if len(partes) > 2 else "Oferta com Envio Rápido"
                 })
     return ofertas
-
-def gerar_link_amazon(termo_busca):
-    termo_codificado = quote_plus(termo_busca)
-    return f"https://www.amazon.com.br/s?k={termo_codificado}&tag={AMAZON_TAG}"
 
 def enviar_telegram(mensagem):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -89,77 +92,77 @@ def enviar_telegram(mensagem):
     }
     try:
         res = requests.post(url, json=payload, timeout=15)
-        return res.status_code == 200
+        if res.status_code == 200:
+            return True
+        print(f"Erro Telegram HTTP {res.status_code}: {res.text}")
+        return False
     except Exception as e:
-        print(f"Erro no envio para o Telegram: {e}")
+        print(f"Exceção ao contactar o Telegram: {e}")
         return False
 
 def processar_amazon():
     enviados = carregar_enviados(HISTORICO_AMAZON)
-    if len(enviados) >= len(TERMOS_AMAZON):
+    pendentes = [t for t in TERMOS_AMAZON if t not in enviados]
+
+    if not pendentes:
         resetar_historico(HISTORICO_AMAZON)
-        enviados = set()
+        pendentes = TERMOS_AMAZON
 
-    for termo in TERMOS_AMAZON:
-        if termo in enviados:
-            continue
+    termo = pendentes[0]
+    link = f"https://www.amazon.com.br/s?k={quote_plus(termo)}&tag={AMAZON_TAG}"
+    termo_fmt = html.escape(termo)
 
-        link = gerar_link_amazon(termo)
-        termo_fmt = html.escape(termo)
+    msg = (
+        f"🔥 <b>OFERTA EM DESTAQUE NA AMAZON</b>\n\n"
+        f"📦 <b>Produto:</b> {termo_fmt}\n"
+        f"🚚 Entrega rápida com Amazon Prime\n"
+        f"💳 Parcelamento sem juros disponível\n\n"
+        f"🛒 <a href='{link}'>Aproveitar Desconto na Amazon</a>"
+    )
 
-        msg = (
-            f"🔥 <b>OFERTA EM DESTAQUE NA AMAZON</b>\n\n"
-            f"📦 <b>Produto:</b> {termo_fmt}\n"
-            f"🚚 Entrega rápida com Amazon Prime\n"
-            f"💳 Parcelamento sem juros disponível\n\n"
-            f"🛒 <a href='{link}'>Aproveitar Desconto na Amazon</a>"
-        )
-
-        if enviar_telegram(msg):
-            salvar_enviado(HISTORICO_AMAZON, termo)
-            print(f"[AMAZON] Postado: {termo}")
-            return True
+    if enviar_telegram(msg):
+        salvar_enviado(HISTORICO_AMAZON, termo)
+        print(f"[AMAZON] Enviado com sucesso: {termo}")
+        return True
     return False
 
 def processar_mercado_livre():
-    ofertas_ml = carregar_ofertas_ml()
-    if not ofertas_ml:
-        print("[MERCADO LIVRE] Nenhuma oferta encontrada em produtos_mercadolivre.txt")
+    ofertas = carregar_ofertas_ml()
+    if not ofertas:
+        print("[MERCADO LIVRE] Sem produtos carregados do ficheiro txt.")
         return False
 
     enviados = carregar_enviados(HISTORICO_ML)
-    if len(enviados) >= len(ofertas_ml):
+    pendentes = [item for item in ofertas if item["link"] not in enviados]
+
+    if not pendentes:
         resetar_historico(HISTORICO_ML)
-        enviados = set()
+        pendentes = ofertas
 
-    for item in ofertas_ml:
-        identificador = item["link"]
-        if identificador in enviados:
-            continue
+    item = pendentes[0]
+    nome_fmt = html.escape(item["nome"])
+    destaque_fmt = html.escape(item["destaque"])
+    link = item["link"]
 
-        nome_fmt = html.escape(item["nome"])
-        destaque_fmt = html.escape(item["destaque"])
-        link = item["link"]
+    msg = (
+        f"⚡ <b>ACHADINHO NO MERCADO LIVRE</b>\n\n"
+        f"📦 <b>Produto:</b> {nome_fmt}\n"
+        f"🚀 <b>Destaque:</b> {destaque_fmt}\n"
+        f"🛡️ Compra 100% Garantida\n\n"
+        f"👉 <a href='{link}'>Ver Oferta no Mercado Livre</a>"
+    )
 
-        msg = (
-            f"⚡ <b>ACHADINHO NO MERCADO LIVRE</b>\n\n"
-            f"📦 <b>Produto:</b> {nome_fmt}\n"
-            f"🚀 <b>Destaque:</b> {destaque_fmt}\n"
-            f"🛡️ Compra 100% Garantida\n\n"
-            f"👉 <a href='{link}'>Ver Oferta no Mercado Livre</a>"
-        )
-
-        if enviar_telegram(msg):
-            salvar_enviado(HISTORICO_ML, identificador)
-            print(f"[MERCADO LIVRE] Postado: {nome_fmt}")
-            return True
+    if enviar_telegram(msg):
+        salvar_enviado(HISTORICO_ML, link)
+        print(f"[MERCADO LIVRE] Enviado com sucesso: {item['nome']}")
+        return True
     return False
 
 def executar():
     print("Iniciando ciclo Misto (Amazon + Mercado Livre)...")
-    postou_amazon = processar_amazon()
-    postou_ml = processar_mercado_livre()
-    print(f"Ciclo finalizado. Amazon: {postou_amazon} | Mercado Livre: {postou_ml}")
+    sucesso_amz = processar_amazon()
+    sucesso_ml = processar_mercado_livre()
+    print(f"Ciclo finalizado. Amazon: {sucesso_amz} | Mercado Livre: {sucesso_ml}")
 
 if __name__ == "__main__":
     executar()
