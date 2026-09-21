@@ -1,20 +1,16 @@
 name: Radar de Ofertas 24h
 
 on:
-  workflow_dispatch:
   schedule:
-    # Executa a cada 1 hora no minuto 17 (evita filas de pico)
-    - cron: '17 * * * *'
-
-permissions:
-  contents: write
+    # Roda a cada 2 horas em minutos quebrados (ex: minuto 17) para o GitHub nunca atrasar
+    - cron: '17 */2 * * *'
+  workflow_dispatch:
 
 jobs:
-  executar-bot:
+  publicar:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Baixar codigo do repositorio
+      - name: Baixar repositório
         uses: actions/checkout@v4
 
       - name: Configurar Python
@@ -22,21 +18,18 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Instalar dependencias
+      - name: Instalar dependências
         run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install requests
 
-      - name: Executar script de ofertas
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          AMAZON_TAG: ${{ secrets.AMAZON_TAG }}
-        run: python main.py
+      - name: Executar Robô de Ofertas
+        run: |
+          python main.py
 
-      - name: Salvar alteracoes (se houver historico de produtos)
+      - name: Salvar histórico de enviados no GitHub
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Atualiza historico de ofertas [skip ci]" && git push)
+          git add historico_amazon.txt historico_mercadolivre.txt historico_shopee.txt || true
+          git commit -m "Auto: Atualiza histórico de ofertas enviadas" || true
+          git push || true
