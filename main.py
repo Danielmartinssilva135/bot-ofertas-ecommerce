@@ -3,10 +3,10 @@ import html
 import requests
 from urllib.parse import quote_plus
 
-# Credenciais e configurações
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8633628956:AAEub3LFY8SCmkgq8FSbghoaT_hmI73ixnM")
-TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "@superofertas_brasil2026")
-AMAZON_TAG = os.environ.get("AMAZON_TAG", "superofer0fb9-20")
+# Credenciais e configurações (com limpeza automática de espaços)
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8633628956:AAEub3LFY8SCmkgq8FSbghoaT_hmI73ixnM").replace(" ", "").strip()
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "@superofertas_brasil2026").strip()
+AMAZON_TAG = os.environ.get("AMAZON_TAG", "superofer0fb9-20").strip()
 
 ARQUIVO_PRODUTOS_ML = "produtos_mercadolivre.txt"
 HISTORICO_AMAZON = "historico_amazon.txt"
