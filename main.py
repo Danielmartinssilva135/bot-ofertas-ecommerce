@@ -3,14 +3,18 @@ import html
 import requests
 from urllib.parse import quote_plus
 
-# Credenciais e configurações forçadas diretamente (sem puxar de Secrets)
+# Credenciais diretas
 TELEGRAM_TOKEN = "8633628956:AAEub3LFY8SCmkgq8FSbghoaT_hmI73ixnM".strip()
 TELEGRAM_CHAT_ID = "@superofertas_brasil2026"
 AMAZON_TAG = "superofer0fb9-20"
 
+# Ficheiros de produtos e históricos
 ARQUIVO_PRODUTOS_ML = "produtos_mercadolivre.txt"
+ARQUIVO_PRODUTOS_SHOPEE = "produtos_shopee.txt"
+
 HISTORICO_AMAZON = "historico_amazon.txt"
 HISTORICO_ML = "historico_mercadolivre.txt"
+HISTORICO_SHOPEE = "historico_shopee.txt"
 
 TERMOS_AMAZON = [
     "Bolsa Térmica Marmita Almoço Trabalho",
@@ -62,13 +66,12 @@ def resetar_historico(arquivo):
         except Exception as e:
             print(f"Erro ao reiniciar {arquivo}: {e}")
 
-def carregar_ofertas_ml():
+def carregar_ofertas_arquivo(caminho_arquivo):
     ofertas = []
-    if not os.path.exists(ARQUIVO_PRODUTOS_ML):
-        print(f"Aviso: {ARQUIVO_PRODUTOS_ML} não encontrado.")
+    if not os.path.exists(caminho_arquivo):
         return ofertas
 
-    with open(ARQUIVO_PRODUTOS_ML, "r", encoding="utf-8") as f:
+    with open(caminho_arquivo, "r", encoding="utf-8") as f:
         for linha in f:
             linha_limpa = linha.strip()
             if not linha_limpa:
@@ -78,7 +81,7 @@ def carregar_ofertas_ml():
                 ofertas.append({
                     "nome": partes[0],
                     "link": partes[1],
-                    "destaque": partes[2] if len(partes) > 2 else "Oferta com Envio Rápido"
+                    "destaque": partes[2] if len(partes) > 2 else "Oferta Especial"
                 })
     return ofertas
 
@@ -122,14 +125,14 @@ def processar_amazon():
 
     if enviar_telegram(msg):
         salvar_enviado(HISTORICO_AMAZON, termo)
-        print(f"[AMAZON] Enviado com sucesso: {termo}")
+        print(f"[AMAZON] Enviado: {termo}")
         return True
     return False
 
 def processar_mercado_livre():
-    ofertas = carregar_ofertas_ml()
+    ofertas = carregar_ofertas_arquivo(ARQUIVO_PRODUTOS_ML)
     if not ofertas:
-        print("[MERCADO LIVRE] Sem produtos carregados do ficheiro txt.")
+        print("[MERCADO LIVRE] Sem ofertas disponíveis no ficheiro.")
         return False
 
     enviados = carregar_enviados(HISTORICO_ML)
@@ -154,15 +157,48 @@ def processar_mercado_livre():
 
     if enviar_telegram(msg):
         salvar_enviado(HISTORICO_ML, link)
-        print(f"[MERCADO LIVRE] Enviado com sucesso: {item['nome']}")
+        print(f"[MERCADO LIVRE] Enviado: {item['nome']}")
+        return True
+    return False
+
+def processar_shopee():
+    ofertas = carregar_ofertas_arquivo(ARQUIVO_PRODUTOS_SHOPEE)
+    if not ofertas:
+        print("[SHOPEE] Sem ofertas cadastradas no ficheiro.")
+        return False
+
+    enviados = carregar_enviados(HISTORICO_SHOPEE)
+    pendentes = [item for item in ofertas if item["link"] not in enviados]
+
+    if not pendentes:
+        resetar_historico(HISTORICO_SHOPEE)
+        pendentes = ofertas
+
+    item = pendentes[0]
+    nome_fmt = html.escape(item["nome"])
+    destaque_fmt = html.escape(item["destaque"])
+    link = item["link"]
+
+    msg = (
+        f"🧡 <b>ACHADINHO NA SHOPEE</b>\n\n"
+        f"📦 <b>Produto:</b> {nome_fmt}\n"
+        f"✨ <b>Destaque:</b> {destaque_fmt}\n"
+        f"🎟️ Use os cupons de frete grátis do app\n\n"
+        f"👉 <a href='{link}'>Aproveitar Oferta na Shopee</a>"
+    )
+
+    if enviar_telegram(msg):
+        salvar_enviado(HISTORICO_SHOPEE, link)
+        print(f"[SHOPEE] Enviado: {item['nome']}")
         return True
     return False
 
 def executar():
-    print("Iniciando ciclo Misto (Amazon + Mercado Livre)...")
-    sucesso_amz = processar_amazon()
-    sucesso_ml = processar_mercado_livre()
-    print(f"Ciclo finalizado. Amazon: {sucesso_amz} | Mercado Livre: {sucesso_ml}")
+    print("Iniciando ciclo Multiplataforma (Amazon + Mercado Livre + Shopee)...")
+    s_amz = processar_amazon()
+    s_ml = processar_mercado_livre()
+    s_shopee = processar_shopee()
+    print(f"Ciclo finalizado -> AMZ: {s_amz} | ML: {s_ml} | Shopee: {s_shopee}")
 
 if __name__ == "__main__":
     executar()
