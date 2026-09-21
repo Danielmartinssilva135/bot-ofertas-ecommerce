@@ -1,14 +1,27 @@
 import os
-import re
 import html
 import requests
-import xml.etree.ElementTree as ET
-from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+from urllib.parse import quote_plus
 
+# Credenciais e IDs oficiais
 TELEGRAM_TOKEN = "8633628956:AAEub3LFY8SCmkgq8FSbghoaT_hmI73ixnM"
 TELEGRAM_CHAT_ID = "@superofertas_brasil2026"
 AMAZON_TAG = "superofer0fb9-20"
 HISTORICO_FILE = "ofertas_enviadas.txt"
+
+# Lista de termos e departamentos com alto volume de vendas diárias
+TERMOS_BUSCA = [
+    "Echo Dot Alexa",
+    "Kindle 11ª geração",
+    "Fire TV Stick 4K",
+    "Smartphone Samsung Galaxy",
+    "PlayStation 5 Controle DualSense",
+    "Fritadeira Air Fryer Mondial",
+    "Fone de Ouvido Bluetooth JBL",
+    "Smartwatch Relógio Inteligente",
+    "Smart TV 50 4K",
+    "Robô Aspirador de Pó"
+]
 
 def carregar_enviados():
     if not os.path.exists(HISTORICO_FILE):
@@ -16,28 +29,13 @@ def carregar_enviados():
     with open(HISTORICO_FILE, "r", encoding="utf-8") as f:
         return set(line.strip() for line in f if line.strip())
 
-def salvar_enviado(link):
+def salvar_enviado(item_id):
     with open(HISTORICO_FILE, "a", encoding="utf-8") as f:
-        f.write(f"{link}\n")
+        f.write(f"{item_id}\n")
 
-def limpar_html(texto):
-    if not texto:
-        return ""
-    limpo = re.sub(r"<[^>]+>", "", texto)
-    return html.unescape(limpo).strip()
-
-def aplicar_tag_afiliado(url):
-    """Garante a inclusão da sua tag se for link da Amazon."""
-    try:
-        parsed = urlparse(url)
-        if "amazon.com" in parsed.netloc:
-            queries = parse_qs(parsed.query)
-            queries["tag"] = [AMAZON_TAG]
-            nova_query = urlencode(queries, doseq=True)
-            return urlunparse(parsed._replace(query=nova_query))
-    except Exception:
-        pass
-    return url
+def gerar_link_afiliado_amazon(termo_busca):
+    termo_codificado = quote_plus(termo_busca)
+    return f"https://www.amazon.com.br/s?k={termo_codificado}&tag={AMAZON_TAG}"
 
 def enviar_telegram(mensagem):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -51,66 +49,38 @@ def enviar_telegram(mensagem):
         res = requests.post(url, json=payload, timeout=15)
         return res.status_code == 200
     except Exception as e:
-        print(f"Erro Telegram: {e}")
+        print(f"Erro no envio: {e}")
         return False
 
-def recolher_ofertas():
-    feed_url = "https://news.google.com/rss/search?q=oferta+desconto+amazon+brasil&hl=pt-BR&gl=BR&ceid=BR:pt-419"
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-
-    try:
-        resposta = requests.get(feed_url, headers=headers, timeout=20)
-        if resposta.status_code != 200:
-            return []
-
-        root = ET.fromstring(resposta.content)
-        itens = []
-        for el in root.findall(".//item"):
-            titulo = el.find("title").text if el.find("title") is not None else ""
-            link = el.find("link").text if el.find("link") is not None else ""
-
-            if titulo and link:
-                itens.append({
-                    "id": link.strip(),
-                    "titulo": limpar_html(titulo),
-                    "link": aplicar_tag_afiliado(link.strip())
-                })
-        return itens
-    except Exception as e:
-        print(f"Erro no feed: {e}")
-        return []
-
 def executar():
-    print("A pesquisar ofertas com links monetizados...")
+    print("Iniciando envio de ofertas verificadas da Amazon...")
     enviados = carregar_enviados()
-    ofertas = recolher_ofertas()
+    enviadas_agora = 0
 
-    if not ofertas:
-        print("Nenhuma oferta nova encontrada.")
-        return
-
-    enviadas = 0
-    for item in ofertas:
-        if enviadas >= 2:
+    for termo in TERMOS_BUSCA:
+        if enviadas_agora >= 2:
             break
 
-        if item["id"] in enviados:
+        if termo in enviados:
             continue
 
-        titulo = html.escape(item["titulo"])
+        link_afiliado = gerar_link_afiliado_amazon(termo)
+        termo_formatado = html.escape(termo)
 
         mensagem = (
-            f"🔥 <b>OFERTA DO DIA RECOMENDADA</b>\n\n"
-            f"📦 <b>{titulo}</b>\n\n"
-            f"🛒 <a href='{item['link']}'>Conferir Desconto na Loja</a>"
+            f"🔥 <b>OFERTA EXCLUSIVA NA AMAZON BRASIL</b>\n\n"
+            f"📦 <b>Produto:</b> {termo_formatado}\n"
+            f"🚚 Frete Grátis com Amazon Prime\n"
+            f"💳 Parcelamento sem juros disponível\n\n"
+            f"🛒 <a href='{link_afiliado}'>Aproveitar Desconto na Amazon</a>"
         )
 
         if enviar_telegram(mensagem):
-            salvar_enviado(item["id"])
-            enviadas += 1
-            print(f"Enviada: {item['titulo']}")
+            salvar_enviado(termo)
+            enviadas_agora += 1
+            print(f"Oferta enviada com tag de afiliado: {termo}")
 
-    print(f"Total enviadas nesta ronda: {enviadas}")
+    print(f"Execução concluída. Total de novas postagens: {enviadas_agora}")
 
 if __name__ == "__main__":
     executar()
