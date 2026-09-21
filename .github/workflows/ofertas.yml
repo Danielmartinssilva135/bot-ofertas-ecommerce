@@ -3,8 +3,8 @@ name: Radar de Ofertas 24h
 on:
   workflow_dispatch:
   schedule:
-    # Executa a cada 2 horas
-    - cron: '0 */2 * * *'
+    # Executa a cada 1 hora em ponto
+    - cron: '0 * * * *'
 
 permissions:
   contents: write
