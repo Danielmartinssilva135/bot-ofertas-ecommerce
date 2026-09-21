@@ -1,6 +1,5 @@
 import os
 import html
-import random
 import requests
 from urllib.parse import quote_plus
 
@@ -12,9 +11,8 @@ AMAZON_TAG = os.environ.get("AMAZON_TAG", "superofer0fb9-20")
 HISTORICO_AMAZON = "historico_amazon.txt"
 HISTORICO_ML = "historico_mercadolivre.txt"
 
-# 1. Catálogo Amazon (Gera busca com a tag de afiliado automaticamente)
+# 1. Catálogo Amazon (Busca com tag dinâmica)
 TERMOS_AMAZON = [
-    # Bolsas Térmicas e Marmitas
     "Bolsa Térmica Marmita Almoço Trabalho",
     "Lancheira Térmica Impermeável Fitness",
     "Bolsa Térmica 2 Compartimentos Marmiteira",
@@ -22,8 +20,6 @@ TERMOS_AMAZON = [
     "Bolsa Térmica Everbags Master",
     "Marmita Elétrica Portátil Bivolt Automóvel e Tomada",
     "Pote Térmico Inox para Sopas e Refeições Quentes",
-
-    # Artigos para Pets
     "Caminha para Cachorro Confortável Lavável",
     "Fonte de Água para Gatos e Cães Automática",
     "Brinquedo Interativo Mordedor Pet",
@@ -32,15 +28,11 @@ TERMOS_AMAZON = [
     "Escova Rasqueadeira Tira Pelos Pet",
     "Arranhador para Gatos com Brinquedo",
     "Bolsa Mochila de Transporte Pet Astronauta",
-
-    # Moda e Cuidados
     "Bolsa Feminina Transversal",
     "Bolsa Feminina de Ombro Chenson",
     "Protetor Solar Facial La Roche-Posay",
     "Escova Secadora Taiff",
     "Organizador de Maquiagem Acrílico",
-
-    # Saúde e Casa
     "Jaleco Feminino Acinturado",
     "Estetoscópio Littmann Classic III",
     "Fritadeira Air Fryer Mondial",
@@ -52,33 +44,32 @@ TERMOS_AMAZON = [
     "Carregador Portátil Power Bank 20000mAh"
 ]
 
-# 2. Catálogo Mercado Livre (Cadastre aqui os produtos com os links rastreáveis do seu painel)
-# Você pode ir adicionando novos produtos e links gerados no gerador de links do Mercado Livre
+# 2. Catálogo Oficial Mercado Livre (Com seus links comissionados)
 OFERTAS_MERCADO_LIVRE = [
     {
-        "nome": "Fritadeira Sem Óleo Air Fryer Mondial 4L Inox",
-        "link": "https://www.mercadolivre.com.br/afiliados/hub",
-        "destaque": "Envio FULL Mercado Livre (Chega Rápido)"
+        "nome": "Kit 2 Câmeras Segurança Ip Interna Externa Wifi iCSee Infravermelho",
+        "link": "https://meli.la/2Sjbo6G",
+        "destaque": "Mais Vendido | Envio Full Imediato"
     },
     {
-        "nome": "Robô Aspirador de Pó Inteligente Bivolt",
-        "link": "https://www.mercadolivre.com.br/afiliados/hub",
-        "destaque": "Frete Grátis e Garantia de Compra"
+        "nome": "Tênis Masculino Feminino Kappa Park 2.0 Original Conforto",
+        "link": "https://meli.la/2vXkAGA",
+        "destaque": "Mais Buscado | Compra 100% Garantida"
     },
     {
-        "nome": "Caminha Pet Nuvem Confort Cães e Gatos Lavável",
-        "link": "https://www.mercadolivre.com.br/afiliados/hub",
-        "destaque": "Vendedor Líder Gold no Mercado Livre"
+        "nome": "Furadeira Parafusadeira Sem Fio Bateria Recarregável",
+        "link": "https://meli.la/1iGzAgC",
+        "destaque": "Destaque em Ferramentas | Parcelamento Disponível"
     },
     {
-        "nome": "Mochila Bolsa Transporte Pet Panorâmica Astronauta",
-        "link": "https://www.mercadolivre.com.br/afiliados/hub",
-        "destaque": "Envio Imediato Mercado Livre Full"
+        "nome": "Chaleira Elétrica Inox Automática 1.8L",
+        "link": "https://meli.la/1i9DD5Z",
+        "destaque": "Cozinha Prática | Entrega Rápida Full"
     },
     {
-        "nome": "Kit 10 Potes de Vidro Herméticos Mantimentos",
-        "link": "https://www.mercadolivre.com.br/afiliados/hub",
-        "destaque": "Até 12x Sem Juros no Mercado Pago"
+        "nome": "Almofada Conforto Ergonômica Suporte Ortopédico",
+        "link": "https://meli.la/146HPYz",
+        "destaque": "Conforto Diário | Frete Especial"
     }
 ]
 
@@ -149,7 +140,7 @@ def processar_mercado_livre():
         enviados = set()
 
     for item in OFERTAS_MERCADO_LIVRE:
-        identificador = item["nome"]
+        identificador = item["link"]
         if identificador in enviados:
             continue
 
@@ -167,7 +158,7 @@ def processar_mercado_livre():
 
         if enviar_telegram(msg):
             salvar_enviado(HISTORICO_ML, identificador)
-            print(f"[MERCADO LIVRE] Postado: {identificador}")
+            print(f"[MERCADO LIVRE] Postado: {nome_fmt}")
             return True
     return False
 
