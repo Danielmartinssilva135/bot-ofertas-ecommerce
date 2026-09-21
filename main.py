@@ -9,18 +9,45 @@ TELEGRAM_CHAT_ID = "@superofertas_brasil2026"
 AMAZON_TAG = "superofer0fb9-20"
 HISTORICO_FILE = "ofertas_enviadas.txt"
 
-# Lista de termos e departamentos com alto volume de vendas diárias
+# Lista ampla e diversificada de produtos com alto volume de busca e conversão
 TERMOS_BUSCA = [
-    "Echo Dot Alexa",
+    # Moda e Beleza Feminina
+    "Bolsa Feminina Transversal",
+    "Bolsa Feminina de Ombro Chenson",
+    "Kit de Maquiagem Completo",
+    "Paleta de Sombras Océane",
+    "Batom Matte Maybelline",
+    "Protetor Solar Facial La Roche-Posay",
+    "Perfume Feminino Importado",
+    "Escova Secadora Taiff",
+    "Modelador de Cachos Automático",
+    "Organizador de Maquiagem Acrílico",
+    
+    # Profissionais da Saúde
+    "Jaleco Feminino Acinturado",
+    "Estetoscópio Littmann Classic III",
+    "Oxímetro de Pulso Digital",
+    "Esfigmomanômetro com Estetoscópio",
+    "Sapato Ortopédico Hospitalar Confortável",
+    "Mochila para Enfermagem e Medicina",
+    "Lanterna Clínica Médica",
+    "Porta Jaleco e Estetoscópio",
+
+    # Casa, Cozinha e Praticidade
+    "Fritadeira Air Fryer Mondial",
+    "Robô Aspirador de Pó",
+    "Cafeteira Nespresso",
+    "Garrafa Térmica Stanley",
+    "Organizador de Geladeira Hermético",
+
+    # Eletrónicos e Tecnologia
+    "Echo Dot Alexa 5ª geração",
     "Kindle 11ª geração",
     "Fire TV Stick 4K",
     "Smartphone Samsung Galaxy",
-    "PlayStation 5 Controle DualSense",
-    "Fritadeira Air Fryer Mondial",
     "Fone de Ouvido Bluetooth JBL",
-    "Smartwatch Relógio Inteligente",
-    "Smart TV 50 4K",
-    "Robô Aspirador de Pó"
+    "Smartwatch Relógio Inteligente Feminino",
+    "Carregador Portátil Power Bank 20000mAh"
 ]
 
 def carregar_enviados():
@@ -57,6 +84,13 @@ def executar():
     enviados = carregar_enviados()
     enviadas_agora = 0
 
+    # Se todos os produtos já foram enviados, reinicia o histórico para rodar o ciclo novamente
+    if len(enviados) >= len(TERMOS_BUSCA):
+        print("Ciclo concluído. Reiniciando lista de produtos...")
+        if os.path.exists(HISTORICO_FILE):
+            os.remove(HISTORICO_FILE)
+        enviados = set()
+
     for termo in TERMOS_BUSCA:
         if enviadas_agora >= 2:
             break
@@ -68,11 +102,11 @@ def executar():
         termo_formatado = html.escape(termo)
 
         mensagem = (
-            f"🔥 <b>OFERTA EXCLUSIVA NA AMAZON BRASIL</b>\n\n"
+            f"🔥 <b>OFERTA EM DESTAQUE NA AMAZON</b>\n\n"
             f"📦 <b>Produto:</b> {termo_formatado}\n"
-            f"🚚 Frete Grátis com Amazon Prime\n"
-            f"💳 Parcelamento sem juros disponível\n\n"
-            f"🛒 <a href='{link_afiliado}'>Aproveitar Desconto na Amazon</a>"
+            f"🚚 Entrega rápida com Amazon Prime\n"
+            f"💳 Parcelamento disponível no cartão\n\n"
+            f"🛒 <a href='{link_afiliado}'>Aproveitar Desconto na Loja</a>"
         )
 
         if enviar_telegram(mensagem):
