@@ -9,8 +9,29 @@ TELEGRAM_CHAT_ID = "@superofertas_brasil2026"
 AMAZON_TAG = "superofer0fb9-20"
 HISTORICO_FILE = "ofertas_enviadas.txt"
 
-# Lista ampla e diversificada de produtos com alto volume de busca e conversão
+# Lista completa categorizada por nichos com grande procura de compra
 TERMOS_BUSCA = [
+    # Bolsas Térmicas e Marmitas para Almoço
+    "Bolsa Térmica Marmita Almoço Trabalho",
+    "Lancheira Térmica Impermeável Fitness",
+    "Bolsa Térmica 2 Compartimentos Marmiteira",
+    "Kit Bolsa Térmica com Potes de Vidro Herméticos",
+    "Bolsa Térmica Everbags Master",
+    "Marmita Elétrica Portátil Bivolt Automóvel e Tomada",
+    "Pote Térmico Inox para Sopas e Refeições Quentes",
+
+    # Artigos para Pets (Cães e Gatos)
+    "Caminha para Cachorro Confortável Lavável",
+    "Fonte de Água para Gatos e Cães Automática",
+    "Brinquedo Interativo Mordedor Pet",
+    "Tapete Higiênico para Cães",
+    "Comedouro e Bebedouro Elevado Inox Pet",
+    "Escova Rasqueadeira Tira Pelos Pet",
+    "Arranhador para Gatos com Brinquedo",
+    "Coleira Guia Peitoral com Amortecedor",
+    "Ração Royal Canin Cães e Gatos",
+    "Bolsa Mochila de Transporte Pet Astronauta",
+
     # Moda e Beleza Feminina
     "Bolsa Feminina Transversal",
     "Bolsa Feminina de Ombro Chenson",
@@ -33,7 +54,7 @@ TERMOS_BUSCA = [
     "Lanterna Clínica Médica",
     "Porta Jaleco e Estetoscópio",
 
-    # Casa, Cozinha e Praticidade
+    # Casa e Eletroportáteis
     "Fritadeira Air Fryer Mondial",
     "Robô Aspirador de Pó",
     "Cafeteira Nespresso",
@@ -84,9 +105,9 @@ def executar():
     enviados = carregar_enviados()
     enviadas_agora = 0
 
-    # Se todos os produtos já foram enviados, reinicia o histórico para rodar o ciclo novamente
+    # Reinicia o histórico quando todos os produtos forem contemplados
     if len(enviados) >= len(TERMOS_BUSCA):
-        print("Ciclo concluído. Reiniciando lista de produtos...")
+        print("Todos os produtos da lista foram enviados. Reiniciando ciclo...")
         if os.path.exists(HISTORICO_FILE):
             os.remove(HISTORICO_FILE)
         enviados = set()
@@ -105,7 +126,7 @@ def executar():
             f"🔥 <b>OFERTA EM DESTAQUE NA AMAZON</b>\n\n"
             f"📦 <b>Produto:</b> {termo_formatado}\n"
             f"🚚 Entrega rápida com Amazon Prime\n"
-            f"💳 Parcelamento disponível no cartão\n\n"
+            f"💳 Parcelamento sem juros disponível\n\n"
             f"🛒 <a href='{link_afiliado}'>Aproveitar Desconto na Loja</a>"
         )
 
