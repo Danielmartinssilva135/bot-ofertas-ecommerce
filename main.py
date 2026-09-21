@@ -8,6 +8,7 @@ TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8633628956:AAEub3LFY8SCmk
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "@superofertas_brasil2026")
 AMAZON_TAG = os.environ.get("AMAZON_TAG", "superofer0fb9-20")
 
+ARQUIVO_PRODUTOS_ML = "produtos_mercadolivre.txt"
 HISTORICO_AMAZON = "historico_amazon.txt"
 HISTORICO_ML = "historico_mercadolivre.txt"
 
@@ -44,35 +45,6 @@ TERMOS_AMAZON = [
     "Carregador Portátil Power Bank 20000mAh"
 ]
 
-# 2. Catálogo Oficial Mercado Livre (Com seus links comissionados)
-OFERTAS_MERCADO_LIVRE = [
-    {
-        "nome": "Kit 2 Câmeras Segurança Ip Interna Externa Wifi iCSee Infravermelho",
-        "link": "https://meli.la/2Sjbo6G",
-        "destaque": "Mais Vendido | Envio Full Imediato"
-    },
-    {
-        "nome": "Tênis Masculino Feminino Kappa Park 2.0 Original Conforto",
-        "link": "https://meli.la/2vXkAGA",
-        "destaque": "Mais Buscado | Compra 100% Garantida"
-    },
-    {
-        "nome": "Furadeira Parafusadeira Sem Fio Bateria Recarregável",
-        "link": "https://meli.la/1iGzAgC",
-        "destaque": "Destaque em Ferramentas | Parcelamento Disponível"
-    },
-    {
-        "nome": "Chaleira Elétrica Inox Automática 1.8L",
-        "link": "https://meli.la/1i9DD5Z",
-        "destaque": "Cozinha Prática | Entrega Rápida Full"
-    },
-    {
-        "nome": "Almofada Conforto Ergonômica Suporte Ortopédico",
-        "link": "https://meli.la/146HPYz",
-        "destaque": "Conforto Diário | Frete Especial"
-    }
-]
-
 def carregar_enviados(arquivo):
     if not os.path.exists(arquivo):
         return set()
@@ -86,6 +58,22 @@ def salvar_enviado(arquivo, item_id):
 def resetar_historico(arquivo):
     if os.path.exists(arquivo):
         os.remove(arquivo)
+
+def carregar_ofertas_ml():
+    ofertas = []
+    if not os.path.exists(ARQUIVO_PRODUTOS_ML):
+        return ofertas
+
+    with open(ARQUIVO_PRODUTOS_ML, "r", encoding="utf-8") as f:
+        for linha in f:
+            partes = [p.strip() for p in linha.split("|")]
+            if len(partes) >= 2:
+                ofertas.append({
+                    "nome": partes[0],
+                    "link": partes[1],
+                    "destaque": partes[2] if len(partes) > 2 else "Oferta com Envio Rápido"
+                })
+    return ofertas
 
 def gerar_link_amazon(termo_busca):
     termo_codificado = quote_plus(termo_busca)
@@ -134,12 +122,17 @@ def processar_amazon():
     return False
 
 def processar_mercado_livre():
+    ofertas_ml = carregar_ofertas_ml()
+    if not ofertas_ml:
+        print("[MERCADO LIVRE] Nenhuma oferta encontrada em produtos_mercadolivre.txt")
+        return False
+
     enviados = carregar_enviados(HISTORICO_ML)
-    if len(enviados) >= len(OFERTAS_MERCADO_LIVRE):
+    if len(enviados) >= len(ofertas_ml):
         resetar_historico(HISTORICO_ML)
         enviados = set()
 
-    for item in OFERTAS_MERCADO_LIVRE:
+    for item in ofertas_ml:
         identificador = item["link"]
         if identificador in enviados:
             continue
