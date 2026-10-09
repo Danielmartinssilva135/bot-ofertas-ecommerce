@@ -1,35 +1,49 @@
-name: Radar de Ofertas 24h
+name: Bot Ofertas E-commerce
 
 on:
   schedule:
-    # Roda a cada 2 horas em minutos quebrados (ex: minuto 17) para o GitHub nunca atrasar
-    - cron: '17 */2 * * *'
+    # Executa a cada 1 hora de domingo a domingo
+    - cron: '0 * * * *'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  publicar:
+  executar-ofertas:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Baixar repositório
+      - name: Baixar código do repositório
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Configurar Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Instalar dependências
         run: |
-          pip install requests
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Executar Robô de Ofertas
-        run: |
-          python main.py
+      - name: Executar bot de ofertas
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python main.py
 
-      - name: Salvar histórico de enviados no GitHub
+      - name: Salvar histórico de ofertas
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add historico_amazon.txt historico_mercadolivre.txt historico_shopee.txt || true
-          git commit -m "Auto: Atualiza histórico de ofertas enviadas" || true
-          git push || true
+          git pull origin main --rebase || true
+          
+          # Cria os arquivos caso ainda não existam para evitar erro no git add
+          touch historico_shopee.txt historico_amazon.txt historico_mercadolivre.txt
+          
+          git add historico_shopee.txt historico_amazon.txt historico_mercadolivre.txt
+          git diff-index --quiet HEAD || (git commit -m "Auto: Atualiza histórico de ofertas enviadas [skip ci]" && git push origin main)
